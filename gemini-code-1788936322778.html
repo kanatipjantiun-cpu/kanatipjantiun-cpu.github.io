@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Portfolio — FeeFee (คณาธิป จันทร์เทียน)</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Three.js, OrbitControls & lil-gui CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.18"></script>
+
+    <style>
+        :root {
+            --c-mercury: #E5E8E1;
+            --c-pale-carmine: #A94228;
+            --c-fawn: #C9AE84;
+            --c-river-bed: #445363;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--c-mercury);
+            font-family: 'Prompt', 'Kanit', sans-serif;
+            color: var(--c-river-bed);
+        }
+
+        #webgl-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Top HUD Bar */
+        header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .brand-badge {
+            background: rgba(229, 232, 225, 0.92);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 16px;
+            border: 1.5px solid var(--c-fawn);
+            box-shadow: 0 10px 25px rgba(68, 83, 99, 0.15);
+            pointer-events: auto;
+        }
+
+        .brand-badge h1 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--c-pale-carmine);
+            line-height: 1.2;
+        }
+
+        .brand-badge p {
+            font-size: 0.8rem;
+            color: var(--c-river-bed);
+            font-weight: 400;
+        }
+
+        .btn-ui {
+            pointer-events: auto;
+            background: var(--c-pale-carmine);
+            color: var(--c-mercury);
+            border: none;
+            padding: 10px 18px;
+            border-radius: 25px;
+            font-family: 'Prompt', sans-serif;
+            font-weight: 500;
+            font-size: 0.88rem;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(169, 66, 40, 0.35);
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-ui:hover {
+            transform: translateY(-2px);
+            background: #be4b2e;
+            box-shadow: 0 8px 22px rgba(169, 66, 40, 0.45);
+        }
+
+        .btn-ui-secondary {
+            background: var(--c-river-bed);
+            box-shadow: 0 6px 18px rgba(68, 83, 99, 0.3);
+        }
+
+        .btn-ui-secondary:hover {
+            background: #33404d;
+        }
+
+        /* Palette Bar Bottom Left */
+        .palette-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(229, 232, 225, 0.88);
+            backdrop-filter: blur(8px);
+            padding: 8px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--c-fawn);
+        }
+
+        .swatch {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+
+        /* Interaction Hint Overlay */
+        .interaction-hint {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10;
+            background: rgba(68, 83, 99, 0.92);
+            color: var(--c-mercury);
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            backdrop-filter: blur(6px);
+            pointer-events: none;
+            border: 1px solid rgba(201, 174, 132, 0.4);
+            animation: pulseGlow 2.5s infinite ease-in-out;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.88; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); }
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(68, 83, 99, 0.65);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: var(--c-mercury);
+            border: 2px solid var(--c-fawn);
+            width: 90%;
+            max-width: 560px;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            position: relative;
+            transform: translateY(20px) scale(0.96);
+            transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--c-river-bed);
+            color: var(--c-mercury);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--c-pale-carmine);
+        }
+
+        .modal-body h2 {
+            color: var(--c-pale-carmine);
+            margin-bottom: 14px;
+            font-size: 1.45rem;
+            font-weight: 600;
+        }
+
+        .modal-body p {
+            color: var(--c-river-bed);
+            line-height: 1.6;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+        }
+
+        .modal-body ul {
+            list-style: none;
+            margin-top: 10px;
+        }
+
+        .modal-body ul li {
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--c-fawn);
+            color: var(--c-river-bed);
+            font-size: 0.92rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* lil-gui Custom Styling */
+        .lil-gui {
+            --background-color: rgba(68, 83, 99, 0.92) !important;
+            --text-color: #E5E8E1 !important;
+            --title-background-color: #A94228 !important;
+            --widget-color: #C9AE84 !important;
+            --hover-color: #be4b2e !important;
+            --focus-color: #A94228 !important;
+            border-radius: 14px !important;
+            overflow: hidden;
+            font-family: 'Prompt', sans-serif !important;
+            z-index: 50 !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            border: 1px solid rgba(201, 174, 132, 0.4) !important;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Top Navigation HUD -->
+    <header>
+        <div class="brand-badge">
+            <h1>FeeFee's 3D Portfolio</h1>
+            <p>Ghibli Sunset Mailbox Scene</p>
+        </div>
+        <button class="btn-ui" id="musicBtn">
+            <span id="musicIcon">🎵</span> <span id="musicText">เปิดเพลง Music</span>
+        </button>
+        <button class="btn-ui btn-ui-secondary" id="resetCamBtn">
+            🎥 รีเซ็ตกล้อง
+        </button>
+    </header>
+
+    <!-- Color Palette Tags -->
+    <div class="palette-indicator">
+        <div class="swatch" style="background: #E5E8E1;" title="Mercury #E5E8E1"></div>
+        <div class="swatch" style="background: #A94228;" title="Pale Carmine #A94228"></div>
+        <div class="swatch" style="background: #C9AE84;" title="Fawn #C9AE84"></div>
+        <div class="swatch" style="background: #445363;" title="River Bed #445363"></div>
+    </div>
+
+    <div class="interaction-hint">
+        🌸 คลิกจดหมาย (About Me), ป้ายข้างตู้ (Skills), หรือหนังสือเปิดกาง (Projects) เพื่อพลิกหน้าดูผลงาน
+    </div>
+
+    <!-- Modal Popup -->
+    <div class="modal-overlay" id="infoModal">
+        <div class="modal-card">
+            <button class="modal-close" id="modalClose">&times;</button>
+            <div class="modal-body" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        /* =========================================================================
+           1. COLOR PALETTE & GLOBAL CONFIGURATION
+           ========================================================================= */
+        const PALETTE = {
+            mercury: 0xE5E8E1,
+            paleCarmine: 0xA94228,
+            fawn: 0xC9AE84,
+            riverBed: 0x445363,
+            sunlight: 0xFFB07C,
+            ambient: 0xE8BA99
+        };
+
+        const config = {
+            mailboxColor: '#A94228',
+            fawnColor: '#C9AE84',
+            grassCount: 3800,
+            flowerCount: 350,
+            lightIntensity: 1.95,
+            windSpeed: 2.2
+        };
+
+        /* =========================================================================
+           2. THREE.JS SCENE, CAMERA & RENDERER SETUP
+           ========================================================================= */
+        const canvas = document.getElementById('webgl-canvas');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(PALETTE.mercury);
+        scene.fog = new THREE.FogExp2(PALETTE.mercury, 0.038);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 3.4, 8.0);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02;
+        controls.minDistance = 2.5;
+        controls.maxDistance = 15;
+        controls.target.set(0, 1.25, 0);
+
+        /* =========================================================================
+           3. LIGHTING (Warm Evening / Sunset Atmosphere)
+           ========================================================================= */
+        const ambientLight = new THREE.AmbientLight(PALETTE.ambient, 0.75);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(PALETTE.sunlight, config.lightIntensity);
+        sunLight.position.set(-8, 9, 6);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 25;
+        sunLight.shadow.camera.left = -6;
+        sunLight.shadow.camera.right = 6;
+        sunLight.shadow.camera.top = 6;
+        sunLight.shadow.camera.bottom = -4;
+        sunLight.shadow.bias = -0.0005;
+        scene.add(sunLight);
+
+        const hemiLight = new THREE.HemisphereLight(0xFFE4C4, PALETTE.riverBed, 0.5);
+        scene.add(hemiLight);
+
+        const rimLight = new THREE.DirectionalLight(PALETTE.fawn, 0.85);
+        rimLight.position.set(6, 4, -6);
+        scene.add(rimLight);
+
+        /* =========================================================================
+           4. PROCEDURAL TEXTURES (Correct Signboard & Squiggly Text)
+           ========================================================================= */
+        
+        // 4.1 Fixed Skills Board Texture
+        function createSkillsBoardTexture() {
+            const cv = document.createElement('canvas');
+            cv.width = 512; cv.height = 680;
+            const ctx = cv.getContext('2d');
+
+            ctx.fillStyle = '#445363';
+            ctx.fillRect(0, 0, 512, 680);
+
+            ctx.strokeStyle = '#C9AE84';
+            ctx.lineWidth = 14;
+            ctx.strokeRect(12, 12, 488, 656);
+
+            ctx.fillStyle = '#E5E8E1';
+            ctx.font = 'bold 34px Prompt, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⚡ SKILLS & TOOLS', 256, 80);
+
+            ctx.fillStyle = '#C9AE84';
+            ctx.fillRect(40, 105, 432, 4);
+
+            ctx.fillStyle = '#E5E8E1';
+            ctx.font = '26px Prompt, sans-serif';
+            ctx.textAlign = 'left';
+
+            const skills = [
+                '🎮 Unity Engine',
+                '🎨 2D & 3D Art',
+                '📦 Blender & Maya',
+                '🎬 Animation & Rigging',
+                '✨ Adobe Tools',
+                '📍 Game Development'
+            ];
+
+            skills.forEach((sk, i) => {
+                ctx.fillText(sk, 55, 175 + (i * 70));
+            });
+
+            const tex = new THREE.CanvasTexture(cv);
+            tex.anisotropy = 16;
+            return tex;
+        }
+
+        // 4.2 Squiggly Text Texture Generator
+        function createSquiggleTextTexture(titleText, isBookPage = false) {
+            const cv = document.createElement('canvas');
+            cv.width = 512; cv.height = 512;
+            const ctx = cv.getContext('2d');
+
+            ctx.fillStyle = '#E5E8E1';
+            ctx.fillRect(0, 0, 512, 512);
+
+            ctx.strokeStyle = '#C9AE84';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(15, 15, 482, 482);
+
+            ctx.fillStyle = '#A94228';
+            ctx.font = 'bold 32px Prompt, sans-serif';
+            ctx.fillText(titleText, 40, 65);
+
+            ctx.strokeStyle = '#445363';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+
+            const startY = 110;
+            const lineCount = isBookPage ? 14 : 10;
+
+            for (let i = 0; i < lineCount; i++) {
+                const y = startY + (i * 26);
+                ctx.beginPath();
+                let x = 40;
+                ctx.moveTo(x, y);
+
+                const lineLength = 400 - (Math.random() * 80);
+                while (x < lineLength) {
+                    const dx = 8 + Math.random() * 12;
+                    const dy = (Math.random() - 0.5) * 6;
+                    x += dx;
+                    ctx.lineTo(x, y + dy);
+                }
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = '#A94228';
+            ctx.beginPath();
+            ctx.arc(420, 420, 30, 0, Math.PI * 2);
+            ctx.fill();
+
+            const tex = new THREE.CanvasTexture(cv);
+            tex.anisotropy = 16;
+            return tex;
+        }
+
+        /* =========================================================================
+           5. CLOSED REALISTIC GHIBLI MAILBOX & SCENE OBJECTS
+           ========================================================================= */
+        const groundGroup = new THREE.Group();
+        scene.add(groundGroup);
+
+        // Ground Hill
+        const groundGeo = new THREE.CylinderGeometry(5.5, 6.2, 0.6, 64);
+        const groundMat = new THREE.MeshStandardMaterial({
+            color: PALETTE.fawn,
+            roughness: 0.9,
+            metalness: 0.1
+        });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.position.y = -0.3;
+        ground.receiveShadow = true;
+        groundGroup.add(ground);
+
+        // Cobblestones
+        const stoneGeo = new THREE.DodecahedronGeometry(0.22, 1);
+        const stoneMat = new THREE.MeshStandardMaterial({ color: PALETTE.riverBed, roughness: 0.8 });
+        for (let i = 0; i < 24; i++) {
+            const stone = new THREE.Mesh(stoneGeo, stoneMat);
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 1.2 + Math.random() * 2.8;
+            stone.position.set(Math.cos(angle) * dist, -0.02, Math.sin(angle) * dist);
+            stone.scale.set(1 + Math.random(), 0.35, 1 + Math.random());
+            stone.rotation.y = Math.random() * Math.PI;
+            stone.receiveShadow = true;
+            groundGroup.add(stone);
+        }
+
+        // --- CLOSED MAILBOX STRUCTURE ---
+        const mailboxGroup = new THREE.Group();
+        scene.add(mailboxGroup);
+
+        const mailboxMat = new THREE.MeshStandardMaterial({
+            color: config.mailboxColor,
+            roughness: 0.35,
+            metalness: 0.25
+        });
+
+        const metalTrimMat = new THREE.MeshStandardMaterial({
+            color: PALETTE.riverBed,
+            roughness: 0.4,
+            metalness: 0.75
+        });
+
+        const goldMat = new THREE.MeshStandardMaterial({
+            color: PALETTE.fawn,
+            roughness: 0.28,
+            metalness: 0.82
+        });
+
+        // Pole
+        const poleGeo = new THREE.CylinderGeometry(0.09, 0.11, 1.8, 32);
+        const pole = new THREE.Mesh(poleGeo, metalTrimMat);
+        pole.position.y = 0.9;
+        pole.castShadow = true;
+        mailboxGroup.add(pole);
+
+        const poleBaseGeo = new THREE.CylinderGeometry(0.26, 0.32, 0.22, 32);
+        const poleBase = new THREE.Mesh(poleBaseGeo, metalTrimMat);
+        poleBase.position.y = 0.11;
+        poleBase.castShadow = true;
+        mailboxGroup.add(poleBase);
+
+        // Box Main Body
+        const boxWidth = 1.12, boxHeight = 1.1, boxDepth = 1.45;
+        const mainBoxGeo = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
+        const mainBox = new THREE.Mesh(mainBoxGeo, mailboxMat);
+        mainBox.position.set(0, 2.1, 0);
+        mainBox.castShadow = true;
+        mainBox.receiveShadow = true;
+        mailboxGroup.add(mainBox);
+
+        // Curved Roof
+        const roofGeo = new THREE.CylinderGeometry(boxWidth / 2, boxWidth / 2, boxDepth, 48, 1, false, 0, Math.PI);
+        const roof = new THREE.Mesh(roofGeo, mailboxMat);
+        roof.rotation.x = Math.PI / 2;
+        roof.rotation.z = -Math.PI / 2;
+        roof.position.set(0, 2.65, 0);
+        roof.castShadow = true;
+        mailboxGroup.add(roof);
+
+        // --- CLOSED FRONT DOOR & FLAP ---
+        const doorPanelGeo = new THREE.BoxGeometry(boxWidth + 0.04, boxHeight, 0.06);
+        const doorPanel = new THREE.Mesh(doorPanelGeo, mailboxMat);
+        doorPanel.position.set(0, 2.1, 0.73);
+        doorPanel.castShadow = true;
+        mailboxGroup.add(doorPanel);
+
+        // Curved Top Arch Cover for Front Door (Completely Sealing the Top)
+        const doorArchGeo = new THREE.CylinderGeometry(boxWidth / 2 + 0.02, boxWidth / 2 + 0.02, 0.06, 32, 1, false, 0, Math.PI);
+        const doorArch = new THREE.Mesh(doorArchGeo, mailboxMat);
+        doorArch.rotation.x = Math.PI / 2;
+        doorArch.rotation.z = -Math.PI / 2;
+        doorArch.position.set(0, 2.65, 0.73);
+        doorArch.castShadow = true;
+        mailboxGroup.add(doorArch);
+
+        // Front Door Latch & Mail Slot Frame
+        const slotFrameGeo = new THREE.BoxGeometry(0.76, 0.2, 0.08);
+        const slotFrame = new THREE.Mesh(slotFrameGeo, goldMat);
+        slotFrame.position.set(0, 2.32, 0.76);
+        mailboxGroup.add(slotFrame);
+
+        const slotInnerGeo = new THREE.BoxGeometry(0.62, 0.05, 0.09);
+        const slotInner = new THREE.Mesh(slotInnerGeo, metalTrimMat);
+        slotInner.position.set(0, 2.32, 0.76);
+        mailboxGroup.add(slotInner);
+
+        // Door Lock Latch Handle
+        const handleGeo = new THREE.TorusGeometry(0.08, 0.02, 16, 32);
+        const handle = new THREE.Mesh(handleGeo, goldMat);
+        handle.position.set(0, 1.82, 0.77);
+        mailboxGroup.add(handle);
+
+        // Side Flag
+        const flagPoleGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.6);
+        const flagPole = new THREE.Mesh(flagPoleGeo, metalTrimMat);
+        flagPole.position.set(0.59, 2.3, 0.2);
+        flagPole.rotation.z = Math.PI / 3;
+        mailboxGroup.add(flagPole);
+
+        const flagGeo = new THREE.BoxGeometry(0.26, 0.16, 0.02);
+        const flag = new THREE.Mesh(flagGeo, new THREE.MeshStandardMaterial({ color: 0xD9381E }));
+        flag.position.set(0.71, 2.42, 0.2);
+        mailboxGroup.add(flag);
+
+        // --- SKILLS BOARD (Using Flat Plane Mesh to Guarantee Correct Text Orientation) ---
+        const boardBackGeo = new THREE.BoxGeometry(0.06, 1.25, 0.95);
+        const boardBackMesh = new THREE.Mesh(boardBackGeo, new THREE.MeshStandardMaterial({ color: PALETTE.riverBed }));
+        boardBackMesh.position.set(-0.62, 2.1, 0);
+        boardBackMesh.castShadow = true;
+        boardBackMesh.name = 'SkillsBoard';
+        mailboxGroup.add(boardBackMesh);
+
+        const skillsTex = createSkillsBoardTexture();
+        const signPlaneGeo = new THREE.PlaneGeometry(0.9, 1.2);
+        const signPlaneMat = new THREE.MeshStandardMaterial({ map: skillsTex, roughness: 0.4 });
+        const signPlaneMesh = new THREE.Mesh(signPlaneGeo, signPlaneMat);
+        signPlaneMesh.position.set(-0.655, 2.1, 0);
+        signPlaneMesh.rotation.y = -Math.PI / 2; // Facing left side (-X)
+        signPlaneMesh.name = 'SkillsBoard';
+        mailboxGroup.add(signPlaneMesh);
+
+        // Board Rings
+        const ringGeo = new THREE.TorusGeometry(0.04, 0.012, 12, 24);
+        const ring1 = new THREE.Mesh(ringGeo, goldMat);
+        ring1.position.set(-0.58, 2.68, -0.28);
+        const ring2 = ring1.clone();
+        ring2.position.z = 0.28;
+        mailboxGroup.add(ring1);
+        mailboxGroup.add(ring2);
+
+        // --- LETTER ON FLOOR ("ABOUT ME") ---
+        const letterGroup = new THREE.Group();
+        letterGroup.position.set(-1.15, 0.05, 1.25);
+        letterGroup.rotation.y = 0.42;
+        scene.add(letterGroup);
+
+        const letterTex = createSquiggleTextTexture('FeeFee — About Me');
+        const envelopeGeo = new THREE.BoxGeometry(0.76, 0.04, 0.54);
+        const envelopeMatArr = [
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn }),
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn }),
+            new THREE.MeshStandardMaterial({ map: letterTex }),
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn }),
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn }),
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn })
+        ];
+        const envelope = new THREE.Mesh(envelopeGeo, envelopeMatArr);
+        envelope.castShadow = true;
+        letterGroup.add(envelope);
+
+        const sealGeo = new THREE.CylinderGeometry(0.065, 0.065, 0.05, 16);
+        const sealMat = new THREE.MeshStandardMaterial({ color: PALETTE.paleCarmine, roughness: 0.3 });
+        const seal = new THREE.Mesh(sealGeo, sealMat);
+        seal.position.set(0, 0.03, 0);
+        letterGroup.add(seal);
+
+        envelope.name = 'AboutMeLetter';
+        seal.name = 'AboutMeLetter';
+
+        // --- OPENED BOOK ON FLOOR WITH PAGE FLIP ("PROJECTS") ---
+        const bookGroup = new THREE.Group();
+        bookGroup.position.set(1.25, 0.05, 1.15);
+        bookGroup.rotation.y = -0.52;
+        scene.add(bookGroup);
+
+        const pageLeftTex = createSquiggleTextTexture('Projects Page A', true);
+        const pageRightTex = createSquiggleTextTexture('Projects Page B', true);
+
+        const bookCoverGeo = new THREE.BoxGeometry(1.2, 0.05, 0.75);
+        const bookCoverMat = new THREE.MeshStandardMaterial({ color: PALETTE.paleCarmine, roughness: 0.5 });
+        const bookCoverMesh = new THREE.Mesh(bookCoverGeo, bookCoverMat);
+        bookCoverMesh.castShadow = true;
+        bookGroup.add(bookCoverMesh);
+
+        const pageGeo = new THREE.BoxGeometry(0.55, 0.03, 0.68);
+        const leftPageMatArr = [
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn }),
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn }),
+            new THREE.MeshStandardMaterial({ map: pageLeftTex }),
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn }),
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn }),
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn })
+        ];
+        const leftPage = new THREE.Mesh(pageGeo, leftPageMatArr);
+        leftPage.position.set(-0.28, 0.03, 0);
+        bookGroup.add(leftPage);
+
+        const rightPageMatArr = [
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn }),
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn }),
+            new THREE.MeshStandardMaterial({ map: pageRightTex }),
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn }),
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn }),
+            new THREE.MeshStandardMaterial({ color: PALETTE.fawn })
+        ];
+        const rightPage = new THREE.Mesh(pageGeo, rightPageMatArr);
+        rightPage.position.set(0.28, 0.03, 0);
+        bookGroup.add(rightPage);
+
+        const flipPageGroup = new THREE.Group();
+        flipPageGroup.position.set(0, 0.04, 0);
+        bookGroup.add(flipPageGroup);
+
+        const flippingPageMesh = new THREE.Mesh(pageGeo, rightPageMatArr);
+        flippingPageMesh.position.set(0.28, 0, 0);
+        flipPageGroup.add(flippingPageMesh);
+
+        bookCoverMesh.name = 'ProjectBook';
+        leftPage.name = 'ProjectBook';
+        rightPage.name = 'ProjectBook';
+        flippingPageMesh.name = 'ProjectBook';
+
+        /* =========================================================================
+           6. LARGER MINIATURE 3D SHOWCASE PEDESTAL (6 Big Models)
+           ========================================================================= */
+        const showcaseGroup = new THREE.Group();
+        showcaseGroup.position.set(1.75, 0, -0.95);
+        scene.add(showcaseGroup);
+
+        // Larger Base
+        const pedestalBaseGeo = new THREE.CylinderGeometry(0.85, 0.98, 0.45, 32);
+        const pedestalBase = new THREE.Mesh(pedestalBaseGeo, goldMat);
+        pedestalBase.position.y = 0.22;
+        pedestalBase.castShadow = true;
+        showcaseGroup.add(pedestalBase);
+
+        // Larger Glass Dome
+        const domeGeo = new THREE.SphereGeometry(0.82, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+        const domeMat = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.28,
+            roughness: 0.05,
+            transmission: 0.95,
+            thickness: 0.6
+        });
+        const dome = new THREE.Mesh(domeGeo, domeMat);
+        dome.position.y = 0.44;
+        showcaseGroup.add(dome);
+
+        // Scaling Up the Miniature Container
+        const miniContainer = new THREE.Group();
+        miniContainer.position.y = 0.85;
+        miniContainer.scale.set(1.65, 1.65, 1.65);
+        showcaseGroup.add(miniContainer);
+
+        // --- 6 BIG & DETAILED MINIATURE MODELS ---
+        function createMiniModel(index) {
+            miniContainer.clear();
+
+            if (index === 0) {
+                // 🗡️ Model 1: Master Sword in Stone & Glowing Runes
+                const swordGroup = new THREE.Group();
+                const stoneGeo = new THREE.DodecahedronGeometry(0.28, 1);
+                const stone = new THREE.Mesh(stoneGeo, new THREE.MeshStandardMaterial({ color: PALETTE.riverBed, roughness: 0.8 }));
+                stone.position.y = -0.15;
+                swordGroup.add(stone);
+
+                const bladeGeo = new THREE.BoxGeometry(0.06, 0.52, 0.02);
+                const blade = new THREE.Mesh(bladeGeo, goldMat);
+                blade.position.y = 0.15;
+
+                const hiltGeo = new THREE.BoxGeometry(0.22, 0.04, 0.05);
+                const hilt = new THREE.Mesh(hiltGeo, metalTrimMat);
+                hilt.position.y = -0.12;
+                blade.add(hilt);
+
+                const gemGeo = new THREE.OctahedronGeometry(0.05);
+                const gem = new THREE.Mesh(gemGeo, new THREE.MeshStandardMaterial({ color: 0xFF3300, emissive: 0xCC1100 }));
+                gem.position.y = -0.05;
+                blade.add(gem);
+
+                swordGroup.add(blade);
+                miniContainer.add(swordGroup);
+
+            } else if (index === 1) {
+                // 🛸 Model 2: Ghibli Flying Airship Castle
+                const airshipGroup = new THREE.Group();
+                const hullGeo = new THREE.ConeGeometry(0.22, 0.6, 16);
+                const hull = new THREE.Mesh(hullGeo, new THREE.MeshStandardMaterial({ color: PALETTE.paleCarmine }));
+                hull.rotation.z = Math.PI / 2;
+                airshipGroup.add(hull);
+
+                const cabinGeo = new THREE.BoxGeometry(0.22, 0.18, 0.2);
+                const cabin = new THREE.Mesh(cabinGeo, new THREE.MeshStandardMaterial({ color: PALETTE.fawn }));
+                cabin.position.set(-0.06, -0.15, 0);
+                airshipGroup.add(cabin);
+
+                const propGeo = new THREE.BoxGeometry(0.02, 0.28, 0.05);
+                const prop = new THREE.Mesh(propGeo, metalTrimMat);
+                prop.position.set(-0.34, 0, 0);
+                airshipGroup.add(prop);
+
+                miniContainer.add(airshipGroup);
+
+            } else if (index === 2) {
+                // 🤖 Model 3: Cyber Mecha Core Head
+                const mechaGroup = new THREE.Group();
+                const headGeo = new THREE.BoxGeometry(0.32, 0.3, 0.32);
+                const head = new THREE.Mesh(headGeo, metalTrimMat);
+
+                const visorGeo = new THREE.BoxGeometry(0.28, 0.1, 0.06);
+                const visor = new THREE.Mesh(visorGeo, new THREE.MeshStandardMaterial({ color: 0x00E5FF, emissive: 0x00AABB }));
+                visor.position.set(0, 0.02, 0.15);
+                head.add(visor);
+
+                const hornGeo = new THREE.ConeGeometry(0.04, 0.26, 8);
+                const hornL = new THREE.Mesh(hornGeo, goldMat);
+                hornL.position.set(-0.18, 0.2, 0);
+                hornL.rotation.z = -0.4;
+                const hornR = hornL.clone();
+                hornR.position.x = 0.18;
+                hornR.rotation.z = 0.4;
+
+                head.add(hornL);
+                head.add(hornR);
+                mechaGroup.add(head);
+                miniContainer.add(mechaGroup);
+
+            } else if (index === 3) {
+                // 🔮 Model 4: Floating Crystal Shrine
+                const shrineGroup = new THREE.Group();
+                const crystalGeo = new THREE.OctahedronGeometry(0.26, 0);
+                const crystalMat = new THREE.MeshStandardMaterial({ color: 0x9D4EDD, emissive: 0x5A189A, roughness: 0.15 });
+                const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+                shrineGroup.add(crystal);
+
+                const ringGeo = new THREE.TorusGeometry(0.38, 0.02, 12, 32);
+                const ring = new THREE.Mesh(ringGeo, goldMat);
+                ring.rotation.x = Math.PI / 3;
+                shrineGroup.add(ring);
+
+                miniContainer.add(shrineGroup);
+
+            } else if (index === 4) {
+                // 🌸 Model 5: Katana Stand Showcase
+                const katanaGroup = new THREE.Group();
+                const standGeo = new THREE.BoxGeometry(0.48, 0.08, 0.14);
+                const stand = new THREE.Mesh(standGeo, new THREE.MeshStandardMaterial({ color: PALETTE.riverBed }));
+                katanaGroup.add(stand);
+
+                const sheathGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.62, 16);
+                const sheath = new THREE.Mesh(sheathGeo, new THREE.MeshStandardMaterial({ color: PALETTE.paleCarmine }));
+                sheath.rotation.z = Math.PI / 2.3;
+                sheath.position.y = 0.15;
+                katanaGroup.add(sheath);
+
+                miniContainer.add(katanaGroup);
+
+            } else {
+                // 🐉 Model 6: Ghibli Spirit Dragon Pet
+                const dragonGroup = new THREE.Group();
+                const bodyGeo = new THREE.SphereGeometry(0.24, 16, 16);
+                const bodyMat = new THREE.MeshStandardMaterial({ color: PALETTE.mercury, roughness: 0.4 });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+
+                const eyeGeo = new THREE.SphereGeometry(0.035, 8, 8);
+                const eyeMat = new THREE.MeshBasicMaterial({ color: PALETTE.riverBed });
+                const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+                eyeL.position.set(-0.09, 0.06, 0.2);
+                const eyeR = eyeL.clone();
+                eyeR.position.x = 0.09;
+
+                body.add(eyeL);
+                body.add(eyeR);
+
+                const maneGeo = new THREE.DodecahedronGeometry(0.15, 0);
+                const mane = new THREE.Mesh(maneGeo, new THREE.MeshStandardMaterial({ color: PALETTE.fawn }));
+                mane.position.set(0, 0.18, -0.06);
+                body.add(mane);
+
+                dragonGroup.add(body);
+                miniContainer.add(dragonGroup);
+            }
+        }
+
+        createMiniModel(0);
+
+        /* =========================================================================
+           7. INTERACTIVE SWAYING GRASS & FLOWERS
+           ========================================================================= */
+        let grassMesh, flowerMesh;
+        const dummy = new THREE.Object3D();
+
+        const grassVertexShader = `
+            uniform float uTime;
+            uniform float uWindSpeed;
+            uniform vec3 uMousePos;
+            attribute float aScale;
+            attribute vec3 aOffset;
+            varying vec2 vUv;
+            varying float vHeight;
+
+            void main() {
+                vUv = uv;
+                vHeight = position.y;
+                vec3 pos = position * aScale;
+                vec3 wPos = pos + aOffset;
+
+                float wind = sin(uTime * uWindSpeed + aOffset.x * 1.5 + aOffset.z * 1.5) * position.y * 0.16;
+                float windZ = cos(uTime * uWindSpeed * 0.7 + aOffset.z * 1.2) * position.y * 0.12;
+
+                float dist = distance(wPos.xz, uMousePos.xz);
+                float interactRadius = 1.8;
+                if (dist < interactRadius) {
+                    float push = (1.0 - dist / interactRadius) * position.y * 0.45;
+                    vec2 dir = normalize(wPos.xz - uMousePos.xz);
+                    wPos.x += dir.x * push;
+                    wPos.z += dir.y * push;
+                }
+
+                wPos.x += wind;
+                wPos.z += windZ;
+
+                vec4 mvPosition = modelViewMatrix * vec4(wPos, 1.0);
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+
+        const grassFragmentShader = `
+            uniform vec3 uBaseColor;
+            uniform vec3 uTipColor;
+            varying vec2 vUv;
+            varying float vHeight;
+
+            void main() {
+                vec3 col = mix(uBaseColor, uTipColor, vHeight / 0.4);
+                gl_FragColor = vec4(col, 1.0);
+            }
+        `;
+
+        const grassMaterial = new THREE.ShaderMaterial({
+            vertexShader: grassVertexShader,
+            fragmentShader: grassFragmentShader,
+            uniforms: {
+                uTime: { value: 0 },
+                uWindSpeed: { value: config.windSpeed },
+                uMousePos: { value: new THREE.Vector3(999, 999, 999) },
+                uBaseColor: { value: new THREE.Color(PALETTE.riverBed) },
+                uTipColor: { value: new THREE.Color(PALETTE.fawn) }
+            },
+            side: THREE.DoubleSide
+        });
+
+        function buildFoliage() {
+            if (grassMesh) scene.remove(grassMesh);
+            if (flowerMesh) scene.remove(flowerMesh);
+
+            const bladeGeo = new THREE.PlaneGeometry(0.04, 0.4, 1, 4);
+            bladeGeo.translate(0, 0.2, 0);
+
+            const count = config.grassCount;
+            grassMesh = new THREE.InstancedMesh(bladeGeo, grassMaterial, count);
+
+            const aScale = new Float32Array(count);
+            const aOffset = new Float32Array(count * 3);
+
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 0.6 + Math.random() * 4.6;
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+
+                aOffset[i * 3] = x;
+                aOffset[i * 3 + 1] = 0;
+                aOffset[i * 3 + 2] = z;
+
+                aScale[i] = 0.65 + Math.random() * 0.75;
+
+                dummy.position.set(x, 0, z);
+                dummy.rotation.y = Math.random() * Math.PI;
+                dummy.updateMatrix();
+                grassMesh.setMatrixAt(i, dummy.matrix);
+            }
+
+            bladeGeo.setAttribute('aScale', new THREE.InstancedBufferAttribute(aScale, 1));
+            bladeGeo.setAttribute('aOffset', new THREE.InstancedBufferAttribute(aOffset, 3));
+
+            grassMesh.receiveShadow = true;
+            scene.add(grassMesh);
+
+            // Flowers
+            const flowerGeo = new THREE.DodecahedronGeometry(0.042, 0);
+            const flowerMat = new THREE.MeshStandardMaterial({ color: PALETTE.paleCarmine, roughness: 0.4 });
+            flowerMesh = new THREE.InstancedMesh(flowerGeo, flowerMat, config.flowerCount);
+
+            for (let i = 0; i < config.flowerCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 0.8 + Math.random() * 4.2;
+                dummy.position.set(Math.cos(angle) * radius, 0.2 + Math.random() * 0.15, Math.sin(angle) * radius);
+                dummy.scale.setScalar(0.8 + Math.random() * 0.7);
+                dummy.updateMatrix();
+                flowerMesh.setMatrixAt(i, dummy.matrix);
+            }
+            flowerMesh.castShadow = true;
+            scene.add(flowerMesh);
+        }
+
+        buildFoliage();
+
+        /* =========================================================================
+           8. PROCEDURAL INSTRUMENTAL JAZZ BGM (Web Audio API)
+           ========================================================================= */
+        let audioCtx = null;
+        let isPlaying = false;
+        let musicTimer = null;
+
+        function initAudio() {
+            if (audioCtx) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+        }
+
+        function playSoftJazzChord() {
+            if (!audioCtx || !isPlaying) return;
+
+            const chordProgressions = [
+                [174.61, 220.00, 261.63, 329.63], // Fmaj7
+                [146.83, 174.61, 220.00, 261.63], // Dm7
+                [196.00, 233.08, 293.66, 349.23], // Gm7
+                [130.81, 164.81, 196.00, 233.08]  // C7
+            ];
+
+            const currentChord = chordProgressions[Math.floor(Math.random() * chordProgressions.length)];
+            const now = audioCtx.currentTime;
+
+            currentChord.forEach((freq) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const filter = audioCtx.createBiquadFilter();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now);
+
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(750, now);
+
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.038, now + 0.3);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.2);
+
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(now);
+                osc.stop(now + 3.3);
+            });
+        }
+
+        const musicBtn = document.getElementById('musicBtn');
+        musicBtn.addEventListener('click', () => {
+            initAudio();
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                document.getElementById('musicIcon').textContent = '⏸️';
+                document.getElementById('musicText').textContent = 'พักเพลง Music';
+                playSoftJazzChord();
+                musicTimer = setInterval(playSoftJazzChord, 3500);
+            } else {
+                document.getElementById('musicIcon').textContent = '🎵';
+                document.getElementById('musicText').textContent = 'เปิดเพลง Music';
+                clearInterval(musicTimer);
+            }
+        });
+
+        /* =========================================================================
+           9. RAYCASTING & INTERACTION (Letter, Board, Book Flip)
+           ========================================================================= */
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const planeIntersect = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        const mouse3D = new THREE.Vector3();
+
+        let activeProjectPageIndex = 0;
+        let isFlipping = false;
+
+        const projectData = [
+            {
+                title: "🗡️ Project 1: Fantasy Master Sword & Relic",
+                desc: "ผลงานการขึ้นโมเดล 3D Props ดาบโบราณเน้นรายละเอียดลายสลักและอัญมณีส่องแสง พัฒนาด้วย Blender & Substance 3D Painter"
+            },
+            {
+                title: "🛸 Project 2: Ghibli Flying Airship World",
+                desc: "ฉากสภาพแวดล้อม 3D และเรือเหาะสไตล์อนิเมชัน Studio Ghibli จัดแสงยามเย็นอบอุ่น พร้อมระบบฟิสิกส์หญ้าและใบพัดหมุน"
+            },
+            {
+                title: "🤖 Project 3: Cyber Mecha Character Design",
+                desc: "การออกแบบตัวละครและส่วนหัวหุ่นยนต์สไตล์ Cyberpunk/Anime ควบคู่กับการจัด Shader แสงเรืองแสงใน Unity Engine"
+            },
+            {
+                title: "🔮 Project 4: Interactive Magic Crystal Shrine",
+                desc: "ผลงาน 3D VFX และคริสตัลเวทมนตร์ลอยตัว พร้อมวงแหวนเวทมนตร์อักขระโบราณตอบสนองการหมุนของกล้อง"
+            },
+            {
+                title: "🌸 Project 5: Stylized Katana Showcase",
+                desc: "ดาบคาตานะสไตล์ Stylized พร้อมฝักดาบลงลายสี Pale Carmine แดงส้ม และฉากหลังซากุระร่วงแบบเรียลไทม์"
+            },
+            {
+                title: "🐉 Project 6: Ghibli Spirit Pet Creature",
+                desc: "โมเดลสัตว์เลี้ยงวิญญาณสไตล์จิบลี ขึ้นรูปทรงโพลีกอนสมูทกลมกลืน ออกแบบเพื่อนำไปประกอบในเกมอินดี้"
+            }
+        ];
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            raycaster.ray.intersectPlane(planeIntersect, mouse3D);
+            if (mouse3D) {
+                grassMaterial.uniforms.uMousePos.value.copy(mouse3D);
+            }
+
+            const intersects = raycaster.intersectObjects(scene.children, true);
+            const isHoveringInteractive = intersects.some(hit => 
+                ['AboutMeLetter', 'SkillsBoard', 'ProjectBook'].includes(hit.object.name)
+            );
+            document.body.style.cursor = isHoveringInteractive ? 'pointer' : 'default';
+        });
+
+        const modalOverlay = document.getElementById('infoModal');
+        const modalContent = document.getElementById('modalContent');
+        const modalClose = document.getElementById('modalClose');
+
+        function showModal(html) {
+            modalContent.innerHTML = html;
+            modalOverlay.classList.add('active');
+        }
+
+        modalClose.addEventListener('click', () => modalOverlay.classList.remove('active'));
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) modalOverlay.classList.remove('active');
+        });
+
+        function triggerPageFlipAnimation() {
+            if (isFlipping) return;
+            isFlipping = true;
+
+            let startAngle = 0;
+            const targetAngle = -Math.PI;
+            const duration = 450;
+            const startTime = performance.now();
+
+            function animateFlip(now) {
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                const easeProgress = Math.sin(progress * Math.PI / 2);
+                flipPageGroup.rotation.z = startAngle + (targetAngle - startAngle) * easeProgress;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateFlip);
+                } else {
+                    flipPageGroup.rotation.z = 0;
+                    isFlipping = false;
+                }
+            }
+
+            requestAnimationFrame(animateFlip);
+        }
+
+        window.addEventListener('click', (e) => {
+            if (e.target.closest('header') || e.target.closest('.lil-gui') || e.target.closest('.modal-card')) return;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+
+            if (intersects.length > 0) {
+                const clickedObj = intersects[0].object;
+
+                if (clickedObj.name === 'AboutMeLetter') {
+                    showModal(`
+                        <h2>✉️ About Me — ข้อมูลของฟี่</h2>
+                        <p><strong>ชื่อ-นามสกุล:</strong> นางสาวคณาธิป จันทร์เทียน (ชื่อเล่น: ฟีฟี่)</p>
+                        <p><strong>สถานะ:</strong> 🎮 Game & Animation student</p>
+                        <p><strong>การศึกษา:</strong> 🎓 Digital Media Design — Game & Animation</p>
+                        <p><strong>สถานที่:</strong> 📍 Thailand</p>
+                        <ul>
+                            <li>🎨 Interested in 2D Art, 3D Art & Game Development</li>
+                            <li>🌸 Love Ghibli, One Piece</li>
+                            <li>🖥️ Working with Unity, Blender, Maya & Adobe tools</li>
+                            <li>✨ Currently creating games, animations and creative projects</li>
+                        </ul>
+                    `);
+                } else if (clickedObj.name === 'SkillsBoard') {
+                    showModal(`
+                        <h2>⚡ Skills & Software Showcase</h2>
+                        <p>ทักษะและความสามารถทางด้านศิลปะและเครื่องมือพัฒนาเกม:</p>
+                        <ul>
+                            <li><strong>3D Modeling:</strong> Blender, Maya (High-Poly, Sculpting, Rigging, UV)</li>
+                            <li><strong>Game Engines:</strong> Unity Engine (Lighting, Scene Setup, Shaders)</li>
+                            <li><strong>2D & Graphics:</strong> Adobe Photoshop, Illustrator, Premiere Pro</li>
+                            <li><strong>Art Styles:</strong> Stylized 3D, Ghibli Aesthetics, Character & Environment Design</li>
+                        </ul>
+                    `);
+                } else if (clickedObj.name === 'ProjectBook') {
+                    triggerPageFlipAnimation();
+
+                    activeProjectPageIndex = (activeProjectPageIndex + 1) % projectData.length;
+                    createMiniModel(activeProjectPageIndex);
+
+                    const proj = projectData[activeProjectPageIndex];
+                    showModal(`
+                        <h2>📖 Projects Showcase (หน้า ${activeProjectPageIndex + 1}/${projectData.length})</h2>
+                        <h3 style="color: var(--c-pale-carmine); margin: 10px 0;">${proj.title}</h3>
+                        <p>${proj.desc}</p>
+                        <p style="font-size: 0.82rem; color: #777; margin-top: 15px;">💡 *โมเดลจำลอง Miniature 3D สุดเท่ในครอบแก้วด้านข้างจะหมุนเปลี่ยนตามหน้าที่เปิด*</p>
+                    `);
+                }
+            }
+        });
+
+        document.getElementById('resetCamBtn').addEventListener('click', () => {
+            controls.target.set(0, 1.25, 0);
+            camera.position.set(0, 3.4, 8.0);
+        });
+
+        /* =========================================================================
+           10. LIL-GUI PARAMETER CONTROLS PANEL
+           ========================================================================= */
+        const gui = new lil.GUI({ title: '⚙️ Scene Customizer' });
+
+        gui.addColor(config, 'mailboxColor').name('📮 สีตู้ไปรษณีย์').onChange(c => {
+            mailboxMat.color.set(c);
+            doorPanel.material.color.set(c);
+            doorArch.material.color.set(c);
+        });
+
+        gui.addColor(config, 'fawnColor').name('🌾 สีฐาน/โทนอุ่น').onChange(c => {
+            groundMat.color.set(c);
+            pedestalBase.material.color.set(c);
+        });
+
+        gui.add(config, 'grassCount', 1000, 6000, 500).name('🌱 จำนวนหญ้า').onChange(() => {
+            buildFoliage();
+        });
+
+        gui.add(config, 'windSpeed', 0.5, 6.0, 0.1).name('🍃 ความแรงลม').onChange(v => {
+            grassMaterial.uniforms.uWindSpeed.value = v;
+        });
+
+        gui.add(config, 'lightIntensity', 0.5, 3.5, 0.1).name('☀️ แสง Warm Sunset').onChange(v => {
+            sunLight.intensity = v;
+        });
+
+        /* =========================================================================
+           11. ANIMATION LOOP & RESIZE EVENT
+           ========================================================================= */
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsedTime = clock.getElapsedTime();
+
+            grassMaterial.uniforms.uTime.value = elapsedTime;
+
+            if (miniContainer) {
+                miniContainer.rotation.y = elapsedTime * 0.85;
+                miniContainer.position.y = 0.82 + Math.sin(elapsedTime * 2) * 0.04;
+            }
+
+            flag.rotation.x = Math.sin(elapsedTime * 1.5) * 0.05;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

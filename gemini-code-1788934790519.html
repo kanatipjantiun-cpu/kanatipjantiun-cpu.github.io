@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Portfolio - Canatip Jantien (Fifi)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&family=Itim&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f8961e;
+            font-family: 'Kanit', sans-serif;
+            color: #333;
+        }
+
+        #webgl-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Top Bar & BGM Button */
+        .top-bar {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+        }
+
+        .bgm-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #f3722c;
+            color: #277da1;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-family: 'Kanit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            backdrop-filter: blur(8px);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bgm-btn:hover {
+            transform: translateY(-2px);
+            background: #ffffff;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        /* Instruction Badge */
+        .instruction {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            background: rgba(255, 250, 240, 0.92);
+            padding: 12px 28px;
+            border-radius: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            font-size: 0.95rem;
+            color: #f3722c;
+            font-weight: 600;
+            pointer-events: none;
+            backdrop-filter: blur(8px);
+            border: 2px solid #f8961e;
+            animation: bounce 2.5s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translate(-50%, 0); }
+            40% { transform: translate(-50%, -8px); }
+            60% { transform: translate(-50%, -4px); }
+        }
+
+        /* Modals */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(30, 18, 12, 0.65);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        .modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            width: 42px;
+            height: 42px;
+            background: #f3722c;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 2px solid #fff;
+            transition: transform 0.2s;
+            z-index: 20;
+        }
+
+        .close-btn:hover {
+            transform: scale(1.1) rotate(90deg);
+        }
+
+        /* Profile Modal (Letter) */
+        .letter-card {
+            background: #fffef7;
+            width: 90%;
+            max-width: 550px;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.35);
+            position: relative;
+            transform: rotate(-1.5deg) translateY(20px);
+            transition: transform 0.4s ease;
+            font-family: 'Itim', cursive;
+            border: 1px solid #e3d8c8;
+            background-image: radial-gradient(#e3d8c8 0.8px, transparent 0.8px);
+            background-size: 16px 16px;
+        }
+
+        .modal.active .letter-card {
+            transform: rotate(-1.5deg) translateY(0);
+        }
+
+        .stamp {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            width: 75px;
+            height: 90px;
+            border: 3px dashed #f3722c;
+            background: #fff8f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: #f3722c;
+            font-weight: bold;
+            transform: rotate(5deg);
+        }
+
+        .letter-header {
+            font-size: 1.8rem;
+            color: #277da1;
+            margin-bottom: 18px;
+            border-bottom: 2px dashed #f8961e;
+            padding-bottom: 8px;
+        }
+
+        .letter-body {
+            font-size: 1.25rem;
+            line-height: 1.8;
+            color: #4a3e3d;
+        }
+
+        .letter-body p { margin-bottom: 10px; }
+
+        /* Skills Modal (Mailbox) */
+        .skills-card {
+            background: #1d2d44;
+            color: #f8961e;
+            width: 90%;
+            max-width: 520px;
+            padding: 35px;
+            border-radius: 20px;
+            position: relative;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+            border: 3px solid #f3722c;
+            transform: translateY(20px);
+            transition: transform 0.4s ease;
+        }
+
+        .modal.active .skills-card { transform: translateY(0); }
+
+        .skills-header {
+            font-size: 1.7rem;
+            color: #f3722c;
+            text-align: center;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+
+        .skill-group { margin-bottom: 22px; }
+        .skill-title { font-size: 1.05rem; color: #f9c74f; margin-bottom: 12px; }
+        .skill-tags { display: flex; flex-wrap: wrap; gap: 10px; }
+        .tag {
+            background: #3d5a80;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            color: #ffffff;
+            border: 1px solid #90e0ef;
+        }
+
+        /* Portfolio Modal (Book & 3D Realistic Viewer) */
+        .book-card {
+            background: #fffdf8;
+            width: 92%;
+            max-width: 900px;
+            height: 600px;
+            border-radius: 16px;
+            position: relative;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.45);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 3px solid #f3722c;
+            transform: translateY(20px);
+            transition: transform 0.4s ease;
+        }
+
+        .modal.active .book-card { transform: translateY(0); }
+
+        .book-content {
+            display: flex;
+            flex: 1;
+            height: calc(100% - 70px);
+        }
+
+        .book-left {
+            flex: 1.3;
+            background: #f4ece1;
+            position: relative;
+            border-right: 2px dashed #d8c2a8;
+        }
+
+        #book-3d-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .viewer-hint {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.65);
+            color: white;
+            padding: 5px 14px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            pointer-events: none;
+        }
+
+        .book-right {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow-y: auto;
+        }
+
+        .project-title {
+            font-size: 1.5rem;
+            color: #277da1;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .project-desc {
+            font-size: 0.95rem;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .controls-panel {
+            background: #fdf6ed;
+            padding: 18px;
+            border-radius: 12px;
+            border: 1px solid #f8961e;
+        }
+
+        .control-group { margin-bottom: 12px; }
+        .control-group:last-child { margin-bottom: 0; }
+
+        .control-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #f3722c;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .color-options { display: flex; gap: 10px; }
+        .color-opt {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        .color-opt:hover { transform: scale(1.2); }
+
+        .slider-input { width: 100%; accent-color: #f3722c; }
+
+        .book-nav {
+            height: 70px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            background: #f7ede2;
+            border-top: 2px solid #f3722c;
+        }
+
+        .nav-btn {
+            background: #f3722c;
+            color: white;
+            border: none;
+            padding: 10px 22px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .nav-btn:hover { background: #f8961e; transform: translateY(-2px); }
+        .nav-btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+        .page-number { font-size: 0.95rem; color: #277da1; font-weight: 600; }
+
+        #loading {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: #f8961e;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            transition: opacity 0.6s ease;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #ffffff;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="loading">
+        <div class="spinner"></div>
+        <p style="font-size: 1.2rem; font-weight: 600;">กำลังสร้างฉาก 3D สไตล์ Realistic Ghibli Evening...</p>
+    </div>
+
+    <div id="webgl-container"></div>
+
+    <div class="top-bar">
+        <button class="bgm-btn" id="bgm-toggle">
+            <span id="bgm-icon">🎵</span> <span id="bgm-text">เปิดเพลง Lazy Cafe Jazz</span>
+        </button>
+    </div>
+
+    <div class="instruction">
+        🌸 คลิกวัตถุเพื่อสำรวจ (จดหมาย / ตู้ไปรษณีย์ / หนังสือ) หรือคลิกพื้นหญ้าเพื่อชมความพลิ้วไหว!
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal" id="modal-letter">
+        <div class="letter-card">
+            <div class="close-btn" onclick="closeModal('modal-letter')">✕</div>
+            <div class="stamp">
+                <div style="font-size:1.8rem">🌸</div>
+                <div>FIFI</div>
+            </div>
+            <div class="letter-header">สวัสดีค่ะ! ฟีฟี่ เองค่ะ 🎮✨</div>
+            <div class="letter-body">
+                <p><strong>ชื่อ-สกุล:</strong> นางสาวคณาธิป จันทร์เทียน (ฟีฟี่)</p>
+                <p><strong>การศึกษา:</strong> 🎓 Digital Media Design — Game & Animation</p>
+                <p><strong>สถานะ:</strong> 🎮 Game & Animation Student</p>
+                <p><strong>ความสนใจ:</strong> 🎨 Interested in 2D Art, 3D Art & Game Development</p>
+                <p><strong>สิ่งที่ชอบ:</strong> 🌸 Love Ghibli, One Piece</p>
+                <p><strong>ปัจจุบัน:</strong> ✨ Currently creating games, animations and creative projects</p>
+                <p><strong>ที่อยู่:</strong> 📍 Thailand</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skills Modal -->
+    <div class="modal" id="modal-mailbox">
+        <div class="skills-card">
+            <div class="close-btn" onclick="closeModal('modal-mailbox')">✕</div>
+            <div class="skills-header">📮 MY SKILLS & TOOLS</div>
+            <div class="skill-group">
+                <div class="skill-title">🖥️ Working Tools & Software</div>
+                <div class="skill-tags">
+                    <span class="tag">🎮 Unity</span>
+                    <span class="tag">📦 Blender</span>
+                    <span class="tag">🗿 Maya</span>
+                    <span class="tag">🎨 Adobe Tools</span>
+                </div>
+            </div>
+            <div class="skill-group">
+                <div class="skill-title">✨ Professional Focus</div>
+                <div class="skill-tags">
+                    <span class="tag">🖌️ 2D Concept Art</span>
+                    <span class="tag">🧊 Realistic 3D Asset Modeling</span>
+                    <span class="tag">🎬 3D Animation & Rigging</span>
+                    <span class="tag">💻 Game Development</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Portfolio 3D Book Modal -->
+    <div class="modal" id="modal-book">
+        <div class="book-card">
+            <div class="close-btn" onclick="closeModal('modal-book')">✕</div>
+            <div class="book-content">
+                <div class="book-left">
+                    <div id="book-3d-canvas"></div>
+                    <div class="viewer-hint">🖱️ ลากเพื่อหมุนตรวจเช็กโมเดล 3D แบบเรียลไทม์</div>
+                </div>
+                <div class="book-right">
+                    <div>
+                        <div class="project-title" id="project-title">Title</div>
+                        <div class="project-desc" id="project-desc">Description</div>
+                    </div>
+
+                    <div class="controls-panel">
+                        <div class="control-group">
+                            <span class="control-label">🎨 เลือกสี/เทกเจอร์โมเดล (Texture Preset):</span>
+                            <div class="color-options" id="color-palette"></div>
+                        </div>
+                        <div class="control-group">
+                            <span class="control-label">💡 ความสว่างของแสง (Light Intensity):</span>
+                            <input type="range" class="slider-input" id="light-slider" min="0.2" max="3.0" step="0.1" value="1.5">
+                        </div>
+                        <div class="control-group">
+                            <span class="control-label">✨ ปรับความมันวาว/ขรุขระ (Surface Roughness):</span>
+                            <input type="range" class="slider-input" id="roughness-slider" min="0.05" max="1.0" step="0.05" value="0.3">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="book-nav">
+                <button class="nav-btn" id="prev-btn" onclick="changePage(-1)">◄ หน้าก่อนหน้า</button>
+                <span class="page-number" id="page-num">หน้า 1 / 3</span>
+                <button class="nav-btn" id="next-btn" onclick="changePage(1)">หน้าถัดไป ►</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // --- 1. Audio Synth (Lazy Cafe Jazz) ---
+        let audioCtx = null;
+        let isMusicPlaying = false;
+        let musicInterval = null;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playJazzNote(freq, duration = 2.0, type = 'sine') {
+            if (!audioCtx || !isMusicPlaying) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.1, audioCtx.currentTime + 0.15);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+
+        const jazzChords = [
+            [261.63, 329.63, 392.00, 493.88], // Cmaj7
+            [220.00, 261.63, 329.63, 392.00], // Am7
+            [293.66, 349.23, 440.00, 523.25], // Dm7
+            [196.00, 246.94, 293.66, 349.23]  // G7
+        ];
+        let chordIdx = 0;
+
+        function playLazyJazzStep() {
+            if (!isMusicPlaying) return;
+            const chord = jazzChords[chordIdx];
+            chord.forEach((freq, idx) => {
+                setTimeout(() => playJazzNote(freq, 2.8, 'triangle'), idx * 140);
+            });
+            if (Math.random() > 0.3) {
+                setTimeout(() => {
+                    const melody = [523.25, 587.33, 659.25, 783.99];
+                    playJazzNote(melody[Math.floor(Math.random() * melody.length)], 2.2, 'sine');
+                }, 900);
+            }
+            chordIdx = (chordIdx + 1) % jazzChords.length;
+        }
+
+        document.getElementById('bgm-toggle').addEventListener('click', () => {
+            initAudio();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            isMusicPlaying = !isMusicPlaying;
+            document.getElementById('bgm-icon').innerText = isMusicPlaying ? '🔊' : '🎵';
+            document.getElementById('bgm-text').innerText = isMusicPlaying ? 'ปิดเพลงแจ๊ส' : 'เปิดเพลง Lazy Cafe Jazz';
+            if (isMusicPlaying) {
+                playLazyJazzStep();
+                musicInterval = setInterval(playLazyJazzStep, 2600);
+            } else {
+                clearInterval(musicInterval);
+            }
+        });
+
+        // --- 2. Portfolio Project Data ---
+        const projects = [
+            {
+                title: "🎮 Realistic Retro Handheld Console",
+                desc: "โมเดลเครื่องเล่นเกมพกพาทรงย้อนยุค รายละเอียดปุ่มกด จอแสดงผล ช่องเสียบตลับเกม และพื้นผิวพลาสติก ABS สมจริง",
+                colors: ["#d62828", "#003049", "#fdf0d5", "#6a040f"],
+                type: "console"
+            },
+            {
+                title: "🛸 Sci-Fi Recon Drone",
+                desc: "โดรนสำรวจดีไซน์อนาคต โมเดลความละเอียดสูง มีรายละเอียดของเลนส์กล้อง ใบพัดเคฟลาร์ และแผงเกราะกันกระแทก",
+                colors: ["#212529", "#e9c46a", "#2a9d8f", "#e76f51"],
+                type: "drone"
+            },
+            {
+                title: "🗡️ Ancient Ghibli Relic Artifact",
+                desc: "ดาบโบราณพันธนาการด้วยเถาวัลย์ธรรมชาติ ออกแบบสไตล์จิบลิผสมผสานความสมจริงของเนื้อโลหะ หิน และลวดลายแกะสลัก",
+                colors: ["#2b2d42", "#8d99ae", "#d8f3dc", "#b5838d"],
+                type: "relic"
+            }
+        ];
+        let currentPage = 0;
+
+        // --- 3. Main Scene Setup (Evening Golden Hour) ---
+        const container = document.getElementById('webgl-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf8961e);
+        scene.fog = new THREE.FogExp2(0xf8961e, 0.03);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 5.0, 10.0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02;
+        controls.minDistance = 4;
+        controls.maxDistance = 16;
+        controls.target.set(0, 1.6, 0);
+
+        // Lighting
+        const ambLight = new THREE.AmbientLight(0xffdfba, 0.9);
+        scene.add(ambLight);
+
+        const sunLight = new THREE.DirectionalLight(0xff7b00, 1.8);
+        sunLight.position.set(9, 11, 7);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.bias = -0.0001;
+        const d = 8;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        scene.add(sunLight);
+
+        const interactiveObjects = [];
+
+        // --- 4. Interactive Foliage (Grass & Flowers) ---
+        const groundGeo = new THREE.PlaneGeometry(40, 40);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x588157, roughness: 0.95 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        const foliageList = [];
+        function createGrassAndFlowers() {
+            const grassBladeGeo = new THREE.ConeGeometry(0.1, 0.55, 4);
+            grassBladeGeo.translate(0, 0.275, 0);
+            const flowerHeadGeo = new THREE.DodecahedronGeometry(0.12);
+
+            for (let i = 0; i < 220; i++) {
+                const isFlower = Math.random() > 0.8;
+                const mat = isFlower 
+                    ? new THREE.MeshStandardMaterial({ color: Math.random() > 0.5 ? 0xffb5a7 : 0xfec5bb, roughness: 0.6 })
+                    : new THREE.MeshStandardMaterial({ color: 0x3a5a40, roughness: 0.9 });
+
+                const mesh = new THREE.Mesh(isFlower ? flowerHeadGeo : grassBladeGeo, mat);
+                const x = (Math.random() - 0.5) * 17;
+                const z = (Math.random() - 0.5) * 17;
+                if (Math.abs(x) < 1.1 && Math.abs(z) < 1.1) continue;
+
+                mesh.position.set(x, isFlower ? 0.22 : 0, z);
+                mesh.rotation.y = Math.random() * Math.PI;
+                mesh.castShadow = true;
+                scene.add(mesh);
+
+                foliageList.push({
+                    mesh: mesh,
+                    basePos: new THREE.Vector3(x, isFlower ? 0.22 : 0, z),
+                    waveAmp: 0
+                });
+            }
+        }
+        createGrassAndFlowers();
+
+        function triggerGrassWave(point) {
+            foliageList.forEach(item => {
+                const dist = item.basePos.distanceTo(point);
+                if (dist < 4.5) {
+                    item.waveAmp = (1.0 - dist / 4.5) * 1.2;
+                }
+            });
+        }
+
+        // --- 5. REALISTIC MAILBOX (Pro Metal Model) ---
+        const mailboxGroup = new THREE.Group();
+
+        // Steel Pole
+        const poleGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.3, 32);
+        const poleMat = new THREE.MeshStandardMaterial({ color: 0x2b2d42, metalness: 0.8, roughness: 0.3 });
+        const pole = new THREE.Mesh(poleGeo, poleMat);
+        pole.position.y = 1.15;
+        pole.castShadow = true;
+        mailboxGroup.add(pole);
+
+        // Mailbox Base Stand Plate
+        const basePlateGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.05, 32);
+        const basePlate = new THREE.Mesh(basePlateGeo, poleMat);
+        basePlate.position.y = 0.025;
+        mailboxGroup.add(basePlate);
+
+        // Main Body (Realistic Curved Top)
+        const boxMat = new THREE.MeshStandardMaterial({ color: 0xae2012, metalness: 0.4, roughness: 0.3 });
+        const boxBodyGeo = new THREE.BoxGeometry(1.3, 1.2, 1.8);
+        const boxBody = new THREE.Mesh(boxBodyGeo, boxMat);
+        boxBody.position.y = 2.5;
+        boxBody.castShadow = true;
+        mailboxGroup.add(boxBody);
+
+        const roofCurveGeo = new THREE.CylinderGeometry(0.65, 0.65, 1.8, 32, 1, false, 0, Math.PI);
+        const roofCurve = new THREE.Mesh(roofCurveGeo, boxMat);
+        roofCurve.rotation.z = Math.PI / 2;
+        roofCurve.rotation.y = Math.PI / 2;
+        roofCurve.position.set(0, 3.1, 0);
+        roofCurve.castShadow = true;
+        mailboxGroup.add(roofCurve);
+
+        // Front Door & Handle
+        const doorGeo = new THREE.CylinderGeometry(0.63, 0.63, 0.05, 32, 1, false, 0, Math.PI);
+        const door = new THREE.Mesh(doorGeo, boxMat);
+        door.rotation.z = Math.PI / 2;
+        door.rotation.y = Math.PI / 2;
+        door.position.set(0, 3.1, 0.91);
+        mailboxGroup.add(door);
+
+        const handleGeo = new THREE.TorusGeometry(0.12, 0.03, 16, 32);
+        const handleMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.2 });
+        const handle = new THREE.Mesh(handleGeo, handleMat);
+        handle.position.set(0, 2.3, 0.93);
+        mailboxGroup.add(handle);
+
+        // Written Skills Texture on Side
+        function createSkillsTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#9b111e'; ctx.fillRect(0, 0, 512, 256);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'Bold 36px Sans-Serif'; ctx.textAlign = 'center';
+            ctx.fillText('📮 SKILLS & TOOLS', 256, 70);
+            ctx.font = '28px Sans-Serif';
+            ctx.fillText('Unity • Blender • Maya', 256, 140);
+            ctx.fillText('2D/3D Art • Animation', 256, 190);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const skillTex = createSkillsTexture();
+        const sideMat = new THREE.MeshStandardMaterial({ map: skillTex, roughness: 0.4 });
+        const sideGeo = new THREE.PlaneGeometry(1.4, 0.8);
+
+        const rightSide = new THREE.Mesh(sideGeo, sideMat);
+        rightSide.position.set(0.66, 2.5, 0);
+        rightSide.rotation.y = Math.PI / 2;
+        mailboxGroup.add(rightSide);
+
+        mailboxGroup.name = "mailbox";
+        scene.add(mailboxGroup);
+        interactiveObjects.push(boxBody, roofCurve, rightSide);
+
+        // --- 6. REALISTIC ENVELOPE/LETTER ON GROUND ---
+        const letterGroup = new THREE.Group();
+
+        const envGeo = new THREE.BoxGeometry(1.2, 0.05, 0.85);
+        const envMat = new THREE.MeshStandardMaterial({ color: 0xfff0d7, roughness: 0.7 });
+        const envelope = new THREE.Mesh(envGeo, envMat);
+        envelope.castShadow = true;
+        letterGroup.add(envelope);
+
+        // Fold line details
+        const flapGeo = new THREE.ConeGeometry(0.5, 0.02, 3);
+        const flap = new THREE.Mesh(flapGeo, envMat);
+        flap.rotation.y = Math.PI / 6;
+        flap.position.set(0, 0.03, 0);
+        letterGroup.add(flap);
+
+        // Stamp
+        const stampGeo = new THREE.BoxGeometry(0.24, 0.06, 0.3);
+        const stampMat = new THREE.MeshStandardMaterial({ color: 0xae2012, roughness: 0.5 });
+        const stamp = new THREE.Mesh(stampGeo, stampMat);
+        stamp.position.set(0.38, 0.01, -0.22);
+        letterGroup.add(stamp);
+
+        letterGroup.position.set(-1.7, 0.03, 1.4);
+        letterGroup.rotation.y = Math.PI / 5;
+        letterGroup.name = "letter";
+        scene.add(letterGroup);
+        interactiveObjects.push(envelope);
+
+        // --- 7. REALISTIC BOOK ON GROUND ---
+        const bookGroup = new THREE.Group();
+
+        const coverGeo = new THREE.BoxGeometry(1.8, 0.08, 1.3);
+        const coverMat = new THREE.MeshStandardMaterial({ color: 0x277da1, roughness: 0.4 });
+        const cover = new THREE.Mesh(coverGeo, coverMat);
+        cover.castShadow = true;
+        bookGroup.add(cover);
+
+        const pagesGeo = new THREE.BoxGeometry(1.7, 0.1, 1.2);
+        const pagesMat = new THREE.MeshStandardMaterial({ color: 0xfffdf0, roughness: 0.8 });
+        const pages = new THREE.Mesh(pagesGeo, pagesMat);
+        pages.position.y = 0.06;
+        pages.castShadow = true;
+        bookGroup.add(pages);
+
+        bookGroup.position.set(1.7, 0.04, 1.3);
+        bookGroup.rotation.y = -Math.PI / 4;
+        bookGroup.name = "book";
+        scene.add(bookGroup);
+        interactiveObjects.push(cover, pages);
+
+        // --- 8. REALISTIC 3D MODEL VIEWER IN BOOK ---
+        let bookScene, bookCamera, bookRenderer, bookControls;
+        let currentModelGroup = null;
+        let bookLight = null;
+        let modelMaterial = null;
+
+        function initBook3DViewer() {
+            const viewerElem = document.getElementById('book-3d-canvas');
+            
+            bookScene = new THREE.Scene();
+            bookScene.background = new THREE.Color(0xf4ece1);
+
+            bookCamera = new THREE.PerspectiveCamera(45, viewerElem.clientWidth / viewerElem.clientHeight, 0.1, 100);
+            bookCamera.position.set(0, 2.2, 4.5);
+
+            bookRenderer = new THREE.WebGLRenderer({ antialias: true });
+            bookRenderer.setSize(viewerElem.clientWidth, viewerElem.clientHeight);
+            bookRenderer.shadowMap.enabled = true;
+            bookRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+            viewerElem.appendChild(bookRenderer.domElement);
+
+            bookControls = new THREE.OrbitControls(bookCamera, bookRenderer.domElement);
+            bookControls.enableDamping = true;
+            bookControls.autoRotate = true;
+            bookControls.autoRotateSpeed = 2.5;
+
+            const amb = new THREE.AmbientLight(0xffffff, 0.8);
+            bookScene.add(amb);
+
+            bookLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            bookLight.position.set(4, 6, 5);
+            bookLight.castShadow = true;
+            bookScene.add(bookLight);
+
+            document.getElementById('light-slider').addEventListener('input', (e) => {
+                if (bookLight) bookLight.intensity = parseFloat(e.target.value);
+            });
+
+            document.getElementById('roughness-slider').addEventListener('input', (e) => {
+                if (modelMaterial) modelMaterial.roughness = parseFloat(e.target.value);
+            });
+        }
+
+        // Realistic Procedural Assets Generation
+        function loadRealisticModel(type, colorHex) {
+            if (currentModelGroup) bookScene.remove(currentModelGroup);
+
+            currentModelGroup = new THREE.Group();
+            modelMaterial = new THREE.MeshStandardMaterial({
+                color: colorHex,
+                roughness: parseFloat(document.getElementById('roughness-slider').value),
+                metalness: 0.3
+            });
+
+            if (type === 'console') {
+                // Console Body
+                const bodyGeo = new THREE.BoxGeometry(1.6, 2.2, 0.3);
+                const body = new THREE.Mesh(bodyGeo, modelMaterial);
+                body.castShadow = true;
+                currentModelGroup.add(body);
+
+                // Screen
+                const screenMat = new THREE.MeshStandardMaterial({ color: 0x0f380f, roughness: 0.1 });
+                const screen = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 0.05), screenMat);
+                screen.position.set(0, 0.4, 0.16);
+                currentModelGroup.add(screen);
+
+                // D-Pad & Buttons
+                const btnMat = new THREE.MeshStandardMaterial({ color: 0x212529, roughness: 0.5 });
+                const dpad = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.1), btnMat);
+                dpad.position.set(-0.4, -0.4, 0.16);
+                currentModelGroup.add(dpad);
+
+                const btnA = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.1, 16), btnMat);
+                btnA.rotation.x = Math.PI / 2;
+                btnA.position.set(0.4, -0.3, 0.16);
+                currentModelGroup.add(btnA);
+
+            } else if (type === 'drone') {
+                // Central Drone Core
+                const core = new THREE.Mesh(new THREE.SphereGeometry(0.6, 32, 16), modelMaterial);
+                core.scale.set(1, 0.5, 1);
+                core.castShadow = true;
+                currentModelGroup.add(core);
+
+                // Camera Lens
+                const lensMat = new THREE.MeshStandardMaterial({ color: 0x00f5d4, emissive: 0x00f5d4, emissiveIntensity: 0.5 });
+                const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.2, 32), lensMat);
+                lens.position.set(0, 0, 0.55);
+                lens.rotation.x = Math.PI / 2;
+                currentModelGroup.add(lens);
+
+                // 4 Rotor Arms & Blades
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i * Math.PI) / 2 + Math.PI / 4;
+                    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.2), modelMaterial);
+                    arm.position.set(Math.cos(angle) * 0.7, 0, Math.sin(angle) * 0.7);
+                    arm.rotation.z = Math.PI / 2;
+                    arm.rotation.y = angle;
+                    currentModelGroup.add(arm);
+
+                    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, 0.1), modelMaterial);
+                    blade.position.set(Math.cos(angle) * 1.2, 0.1, Math.sin(angle) * 1.2);
+                    currentModelGroup.add(blade);
+                }
+
+            } else if (type === 'relic') {
+                // Blade
+                const bladeMat = new THREE.MeshStandardMaterial({ color: 0xe0e1dd, metalness: 0.9, roughness: 0.2 });
+                const blade = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.2, 0.04), bladeMat);
+                blade.position.y = 0.5;
+                blade.castShadow = true;
+                currentModelGroup.add(blade);
+
+                // Guard & Hilt
+                const guard = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.1, 0.15), modelMaterial);
+                guard.position.y = -0.5;
+                currentModelGroup.add(guard);
+
+                const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.6), modelMaterial);
+                hilt.position.y = -0.85;
+                currentModelGroup.add(hilt);
+            }
+
+            bookScene.add(currentModelGroup);
+        }
+
+        function animateBookViewer() {
+            if (document.getElementById('modal-book').classList.contains('active')) {
+                requestAnimationFrame(animateBookViewer);
+                if (bookControls) bookControls.update();
+                if (bookRenderer && bookScene && bookCamera) {
+                    bookRenderer.render(bookScene, bookCamera);
+                }
+            }
+        }
+
+        function updatePage() {
+            const p = projects[currentPage];
+            document.getElementById('project-title').innerText = p.title;
+            document.getElementById('project-desc').innerText = p.desc;
+            document.getElementById('page-num').innerText = `หน้า ${currentPage + 1} / ${projects.length}`;
+            
+            document.getElementById('prev-btn').disabled = currentPage === 0;
+            document.getElementById('next-btn').disabled = currentPage === projects.length - 1;
+
+            const paletteElem = document.getElementById('color-palette');
+            paletteElem.innerHTML = '';
+            p.colors.forEach(hex => {
+                const opt = document.createElement('div');
+                opt.className = 'color-opt';
+                opt.style.background = hex;
+                opt.onclick = () => loadRealisticModel(p.type, hex);
+                paletteElem.appendChild(opt);
+            });
+
+            loadRealisticModel(p.type, p.colors[0]);
+        }
+
+        function changePage(dir) {
+            currentPage += dir;
+            if (currentPage < 0) currentPage = 0;
+            if (currentPage >= projects.length) currentPage = projects.length - 1;
+            updatePage();
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+            if (id === 'modal-book') {
+                if (!bookRenderer) initBook3DViewer();
+                updatePage();
+                setTimeout(() => {
+                    const elem = document.getElementById('book-3d-canvas');
+                    bookCamera.aspect = elem.clientWidth / elem.clientHeight;
+                    bookCamera.updateProjectionMatrix();
+                    bookRenderer.setSize(elem.clientWidth, elem.clientHeight);
+                    animateBookViewer();
+                }, 100);
+            }
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        // --- 9. Raycasting Interaction ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.modal') || e.target.closest('.top-bar')) return;
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(interactiveObjects);
+            if (intersects.length > 0) {
+                let obj = intersects[0].object;
+                while (obj.parent && obj.parent !== scene) obj = obj.parent;
+
+                if (obj.name === 'letter') openModal('modal-letter');
+                else if (obj.name === 'mailbox') openModal('modal-mailbox');
+                else if (obj.name === 'book') openModal('modal-book');
+                return;
+            }
+
+            const groundHits = raycaster.intersectObject(ground);
+            if (groundHits.length > 0) {
+                triggerGrassWave(groundHits[0].point);
+            }
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveObjects);
+            document.body.style.cursor = intersects.length > 0 ? 'pointer' : 'default';
+        });
+
+        // Hide Loading Screen
+        setTimeout(() => {
+            document.getElementById('loading').style.opacity = '0';
+            setTimeout(() => document.getElementById('loading').style.display = 'none', 600);
+        }, 1000);
+
+        // --- 10. Main Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = Date.now() * 0.002;
+
+            // Grass Sway Simulation
+            foliageList.forEach(item => {
+                if (item.waveAmp > 0.01) item.waveAmp *= 0.95;
+                else item.waveAmp = 0;
+
+                const sway = Math.sin(time * 3 + item.basePos.x) * 0.12 + Math.sin(time * 6) * item.waveAmp;
+                item.mesh.rotation.z = sway;
+            });
+
+            // Gentle Float Effect
+            letterGroup.position.y = 0.03 + Math.sin(time * 2) * 0.015;
+            bookGroup.position.y = 0.04 + Math.cos(time * 2) * 0.015;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
