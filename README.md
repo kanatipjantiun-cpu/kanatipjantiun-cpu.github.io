@@ -1,9 +1,29 @@
-# kanatipjantiun-cpu.github.io
-# Hi, I'm Fifi 
-Game & Animation student
-Interested in 2D Art, 3D Art & Game Development
-Love Ghibli, One Piece, Marvel & BL Manga
-Working with Unity, Blender, Maya & Adobe tools
-Currently creating games, animations and creative projects
-Thailand
-Digital Media Design — Game & Animation
+# Fifi
+
+## About Me
+
+I'm a Game & Animation student from Thailand, currently studying Digital Media Design at Rajamangala University of Technology Rattanakosin, Salaya Campus.
+
+## Interests
+
+Game Development  
+2D Art  
+3D Art  
+Animation  
+
+## Tools
+
+Unity  
+Blender  
+Maya  
+Premiere Pro  
+CapCut  
+
+## Hobbies
+
+Ghibli  
+One Piece  
+Marvel  
+Literature  
+Manga  
+Games
