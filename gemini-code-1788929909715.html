@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Portfolio - Canatip Jantien (Fifi)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&family=Itim&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #1a1c23;
+            font-family: 'Kanit', sans-serif;
+            color: #333;
+        }
+
+        #webgl-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* UI Overlay Instructions */
+        .instruction {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 12px 24px;
+            border-radius: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            font-size: 1rem;
+            color: #4a4a4a;
+            pointer-events: none;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translate(-50%, 0); }
+            40% { transform: translate(-50%, -8px); }
+            60% { transform: translate(-50%, -4px); }
+        }
+
+        /* Modal Overlay base */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 18, 25, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        .modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Close Button */
+        .close-btn {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            width: 40px;
+            height: 40px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+
+        .close-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* Letter Modal (Profile) */
+        .letter-card {
+            background: #fffdf5;
+            width: 90%;
+            max-width: 550px;
+            padding: 40px;
+            border-radius: 4px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            position: relative;
+            transform: rotate(-1deg) translateY(20px);
+            transition: transform 0.4s ease;
+            font-family: 'Itim', cursive;
+            border: 1px solid #e0dacf;
+            background-image: radial-gradient(#e1d7c6 0.75px, transparent 0.75px);
+            background-size: 15px 15px;
+        }
+
+        .modal.active .letter-card {
+            transform: rotate(-1deg) translateY(0);
+        }
+
+        .stamp {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            width: 70px;
+            height: 85px;
+            border: 3px dashed #b84a39;
+            background: #fff8f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: #b84a39;
+            text-align: center;
+            font-weight: bold;
+            transform: rotate(4deg);
+        }
+
+        .stamp-icon {
+            font-size: 1.8rem;
+            margin-bottom: 3px;
+        }
+
+        .letter-header {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            border-bottom: 2px dashed #dcd6cd;
+            padding-bottom: 10px;
+        }
+
+        .letter-body {
+            font-size: 1.25rem;
+            line-height: 1.8;
+            color: #444;
+        }
+
+        .letter-body p {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Mailbox Modal (Skills) */
+        .skills-card {
+            background: #2c3e50;
+            color: #ecf0f1;
+            width: 90%;
+            max-width: 500px;
+            padding: 35px;
+            border-radius: 16px;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border: 2px solid #34495e;
+            transform: translateY(20px);
+            transition: transform 0.4s ease;
+        }
+
+        .modal.active .skills-card {
+            transform: translateY(0);
+        }
+
+        .skills-header {
+            font-size: 1.6rem;
+            color: #e74c3c;
+            text-align: center;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .skill-group {
+            margin-bottom: 20px;
+        }
+
+        .skill-title {
+            font-size: 1rem;
+            color: #bdc3c7;
+            margin-bottom: 10px;
+        }
+
+        .skill-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .tag {
+            background: #34495e;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            color: #2ecc71;
+            border: 1px solid #415b76;
+        }
+
+        /* Book Modal (Portfolio Projects) */
+        .book-card {
+            background: #fff;
+            width: 90%;
+            max-width: 650px;
+            height: 480px;
+            border-radius: 12px;
+            position: relative;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: translateY(20px);
+            transition: transform 0.4s ease;
+        }
+
+        .modal.active .book-card {
+            transform: translateY(0);
+        }
+
+        .book-page {
+            padding: 35px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .project-preview {
+            width: 100%;
+            height: 200px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: white;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.15);
+        }
+
+        .project-title {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .project-desc {
+            font-size: 1rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .book-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 35px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+        }
+
+        .nav-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        .nav-btn:hover {
+            background: #c0392b;
+        }
+
+        .nav-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .page-number {
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        /* Loading Screen */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #1a1c23;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            transition: opacity 0.5s ease;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top-color: #e74c3c;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>กำลังโหลด 3D Scene...</p>
+    </div>
+
+    <div id="webgl-container"></div>
+
+    <div class="instruction">
+        👆 คลิกที่วัตถุในฉากเพื่อสำรวจ (ตู้ไปรษณีย์ / จดหมาย / หนังสือ)
+    </div>
+
+    <!-- Modal Profile (Envelope/Letter) -->
+    <div class="modal" id="modal-letter">
+        <div class="letter-card">
+            <div class="close-btn" onclick="closeModal('modal-letter')">✕</div>
+            <div class="stamp">
+                <div class="stamp-icon">🎮</div>
+                <div>FIFI</div>
+            </div>
+            <div class="letter-header">
+                สวัสดีค่ะ! ฟีฟี่ เอง 🌸
+            </div>
+            <div class="letter-body">
+                <p><strong>ชื่อ:</strong> นางสาวคณาธิป จันทร์เทียน (ฟีฟี่)</p>
+                <p><strong>การศึกษา:</strong> 🎓 Digital Media Design — Game & Animation</p>
+                <p><strong>ตำแหน่ง/สถานะ:</strong> 🎮 Game & Animation student</p>
+                <p><strong>ความสนใจ:</strong> 🎨 2D Art, 3D Art & Game Development</p>
+                <p><strong>สิ่งที่ชอบ:</strong> 🌸 Ghibli & One Piece</p>
+                <p><strong>ปัจจุบัน:</strong> ✨ Currently creating games, animations and creative projects</p>
+                <p><strong>ที่อยู่:</strong> 📍 Thailand</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Skills (Mailbox) -->
+    <div class="modal" id="modal-mailbox">
+        <div class="skills-card">
+            <div class="close-btn" onclick="closeModal('modal-mailbox')">✕</div>
+            <div class="skills-header">📮 SKILLS & TOOLS</div>
+            
+            <div class="skill-group">
+                <div class="skill-title">Software & Tools</div>
+                <div class="skill-tags">
+                    <span class="tag">🎮 Unity</span>
+                    <span class="tag">📦 Blender</span>
+                    <span class="tag">🗿 Maya</span>
+                    <span class="tag">🎨 Adobe Tools</span>
+                </div>
+            </div>
+
+            <div class="skill-group">
+                <div class="skill-title">Specializations</div>
+                <div class="skill-tags">
+                    <span class="tag">🖌️ 2D Art</span>
+                    <span class="tag">🧊 3D Modeling</span>
+                    <span class="tag">🎬 Animation</span>
+                    <span class="tag">💻 Game Development</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Book (Projects / Works) -->
+    <div class="modal" id="modal-book">
+        <div class="book-card">
+            <div class="close-btn" onclick="closeModal('modal-book')">✕</div>
+            <div class="book-page">
+                <div>
+                    <div class="project-preview" id="project-bg">📖</div>
+                    <div class="project-title" id="project-title">Project Title</div>
+                    <div class="project-desc" id="project-desc">Project Description</div>
+                </div>
+                <div class="book-nav">
+                    <button class="nav-btn" id="prev-btn" onclick="changePage(-1)">◄ ก่อนหน้า</button>
+                    <span class="page-number" id="page-num">หน้า 1 / 3</span>
+                    <button class="nav-btn" id="next-btn" onclick="changePage(1)">ถัดไป ►</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js and OrbitControls via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // --- Portfolio Data ---
+        const projects = [
+            {
+                title: "🌸 Ghibli-Inspired 3D Environment",
+                desc: "ผลงานฉาก 3D สไตล์อนิเมะ Ghibli สร้างขึ้นโดยใช้ Blender และจัดแสงใน Unity ให้ความรู้สึกอบอุ่น ผ่อนคลาย",
+                bg: "linear-gradient(135deg, #a8e6cf 0%, #dbede6 100%)",
+                icon: "🏡"
+            },
+            {
+                title: "🎮 3D Action-Adventure Game Project",
+                desc: "โปรเจกต์เกม 3D ออกแบบตัวละคร 3D Modeling ใน Maya พัฒนาระบบ Gameplay ด้วย Unity C#",
+                bg: "linear-gradient(135deg, #ff8b94 0%, #ffaaa6 100%)",
+                icon: "⚔️"
+            },
+            {
+                title: "🎨 2D/3D Concept Art & Animation",
+                desc: "รวบรวมงานออกแบบตัวละคร 2D Concept Art และการทำ 3D Rigging & Animation สำหรับงานดิจิทัลมีเดีย",
+                bg: "linear-gradient(135deg, #ffd3b6 0%, #ffaaa6 100%)",
+                icon: "🎬"
+            }
+        ];
+
+        let currentPage = 0;
+
+        function updatePage() {
+            const p = projects[currentPage];
+            document.getElementById('project-title').innerText = p.title;
+            document.getElementById('project-desc').innerText = p.desc;
+            document.getElementById('project-bg').style.background = p.bg;
+            document.getElementById('project-bg').innerText = p.icon;
+            document.getElementById('page-num').innerText = `หน้า ${currentPage + 1} / ${projects.length}`;
+            
+            document.getElementById('prev-btn').disabled = currentPage === 0;
+            document.getElementById('next-btn').disabled = currentPage === projects.length - 1;
+        }
+
+        function changePage(dir) {
+            currentPage += dir;
+            if(currentPage < 0) currentPage = 0;
+            if(currentPage >= projects.length) currentPage = projects.length - 1;
+            updatePage();
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+            if(id === 'modal-book') updatePage();
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        // --- Three.js Setup ---
+        const container = document.getElementById('webgl-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xdce6f2);
+        scene.fog = new THREE.FogExp2(0xdce6f2, 0.035);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 4.5, 9);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05; // Prevent camera under ground
+        controls.minDistance = 4;
+        controls.maxDistance = 15;
+        controls.target.set(0, 1.5, 0);
+
+        // --- Lighting ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
+        dirLight.position.set(5, 10, 7);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 25;
+        const d = 6;
+        dirLight.shadow.camera.left = -d;
+        dirLight.shadow.camera.right = d;
+        dirLight.shadow.camera.top = d;
+        dirLight.shadow.camera.bottom = -d;
+        scene.add(dirLight);
+
+        // --- Interactive Objects Array ---
+        const interactiveObjects = [];
+
+        // Helper texture for text on mailbox
+        function createTextTexture(text) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#c0392b';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'Bold 34px Sans-Serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        // --- Ground & Grass ---
+        const groundGeo = new THREE.PlaneGeometry(30, 30);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x7ec850, roughness: 0.8 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Add small decorative grass patches
+        for (let i = 0; i < 40; i++) {
+            const grassGeo = new THREE.ConeGeometry(0.1, 0.4, 3);
+            const grassMat = new THREE.MeshStandardMaterial({ color: 0x5da832, roughness: 0.9 });
+            const grass = new THREE.Mesh(grassGeo, grassMat);
+            const x = (Math.random() - 0.5) * 12;
+            const z = (Math.random() - 0.5) * 12;
+            grass.position.set(x, 0.2, z);
+            grass.rotation.y = Math.random() * Math.PI;
+            scene.add(grass);
+        }
+
+        // --- 1. Mailbox Group (Skills) ---
+        const mailboxGroup = new THREE.Group();
+
+        // Pole
+        const poleGeo = new THREE.CylinderGeometry(0.08, 0.08, 2, 16);
+        const poleMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.7 });
+        const pole = new THREE.Mesh(poleGeo, poleMat);
+        pole.position.y = 1;
+        pole.castShadow = true;
+        pole.receiveShadow = true;
+        mailboxGroup.add(pole);
+
+        // Box Main Body
+        const boxGeo = new THREE.BoxGeometry(1.2, 1.4, 1.6);
+        const boxMat = new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.3 });
+        const box = new THREE.Mesh(boxGeo, boxMat);
+        box.position.y = 2.4;
+        box.castShadow = true;
+        box.receiveShadow = true;
+        mailboxGroup.add(box);
+
+        // Roof Curve Top
+        const roofGeo = new THREE.CylinderGeometry(0.8, 0.8, 1.2, 16, 1, false, 0, Math.PI);
+        const roof = new THREE.Mesh(roofGeo, boxMat);
+        roof.rotation.z = Math.PI / 2;
+        roof.rotation.y = Math.PI / 2;
+        roof.position.set(0, 3.1, 0);
+        roof.castShadow = true;
+        mailboxGroup.add(roof);
+
+        // Side Text Plate (Skills Written on Side)
+        const textTex = createTextTexture("TOOLS & SKILLS");
+        const plateMat = new THREE.MeshStandardMaterial({ map: textTex });
+        const plateGeo = new THREE.PlaneGeometry(1.2, 0.6);
+        
+        const plateRight = new THREE.Mesh(plateGeo, plateMat);
+        plateRight.position.set(0.61, 2.4, 0);
+        plateRight.rotation.y = Math.PI / 2;
+        mailboxGroup.add(plateRight);
+
+        const plateLeft = new THREE.Mesh(plateGeo, plateMat);
+        plateLeft.position.set(-0.61, 2.4, 0);
+        plateLeft.rotation.y = -Math.PI / 2;
+        mailboxGroup.add(plateLeft);
+
+        // Mailbox Flag
+        const flagGroup = new THREE.Group();
+        const flagPoleGeo = new THREE.BoxGeometry(0.04, 0.8, 0.04);
+        const flagPoleMat = new THREE.MeshStandardMaterial({ color: 0x2d3436 });
+        const flagPole = new THREE.Mesh(flagPoleGeo, flagPoleMat);
+        flagPole.position.y = 0.3;
+        
+        const flagTopGeo = new THREE.BoxGeometry(0.04, 0.3, 0.4);
+        const flagTopMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f });
+        const flagTop = new THREE.Mesh(flagTopGeo, flagTopMat);
+        flagTop.position.set(0, 0.6, 0.15);
+
+        flagGroup.add(flagPole);
+        flagGroup.add(flagTop);
+        flagGroup.position.set(0.65, 2.2, -0.4);
+        flagGroup.rotation.z = -Math.PI / 6;
+        mailboxGroup.add(flagGroup);
+
+        mailboxGroup.name = "mailbox";
+        scene.add(mailboxGroup);
+        interactiveObjects.push(box, roof, plateRight, plateLeft);
+
+        // --- 2. Letter/Envelope on Ground (Profile) ---
+        const letterGroup = new THREE.Group();
+
+        const envGeo = new THREE.BoxGeometry(1.0, 0.05, 0.7);
+        const envMat = new THREE.MeshStandardMaterial({ color: 0xfffae6, roughness: 0.5 });
+        const envelope = new THREE.Mesh(envGeo, envMat);
+        envelope.castShadow = true;
+        envelope.receiveShadow = true;
+        letterGroup.add(envelope);
+
+        // Stamp on Letter
+        const stampGeo = new THREE.BoxGeometry(0.2, 0.06, 0.25);
+        const stampMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c });
+        const stampMesh = new THREE.Mesh(stampGeo, stampMat);
+        stampMesh.position.set(0.3, 0.01, -0.18);
+        letterGroup.add(stampMesh);
+
+        letterGroup.position.set(-1.4, 0.03, 1.2);
+        letterGroup.rotation.y = Math.PI / 5;
+        letterGroup.name = "letter";
+        scene.add(letterGroup);
+        interactiveObjects.push(envelope);
+
+        // --- 3. Open Book on Ground (Portfolio Works) ---
+        const bookGroup = new THREE.Group();
+
+        // Cover
+        const coverGeo = new THREE.BoxGeometry(1.6, 0.06, 1.1);
+        const coverMat = new THREE.MeshStandardMaterial({ color: 0x2980b9, roughness: 0.6 });
+        const cover = new THREE.Mesh(coverGeo, coverMat);
+        cover.castShadow = true;
+        cover.receiveShadow = true;
+        bookGroup.add(cover);
+
+        // Inner Pages
+        const pagesGeo = new THREE.BoxGeometry(1.5, 0.08, 1.0);
+        const pagesMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
+        const pages = new THREE.Mesh(pagesGeo, pagesMat);
+        pages.position.y = 0.05;
+        pages.castShadow = true;
+        bookGroup.add(pages);
+
+        bookGroup.position.set(1.5, 0.04, 1.0);
+        bookGroup.rotation.y = -Math.PI / 6;
+        bookGroup.name = "book";
+        scene.add(bookGroup);
+        interactiveObjects.push(cover, pages);
+
+        // --- Hide Loading Screen ---
+        setTimeout(() => {
+            document.getElementById('loading').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+            }, 500);
+        }, 800);
+
+        // --- Raycasting for Interactivity ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('pointerdown', (e) => {
+            // Ignore if clicking on UI buttons
+            if (e.target.closest('.modal') || e.target.closest('.close-btn')) return;
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveObjects);
+
+            if (intersects.length > 0) {
+                let currentObj = intersects[0].object;
+                while (currentObj.parent && currentObj.parent !== scene) {
+                    currentObj = currentObj.parent;
+                }
+
+                if (currentObj.name === 'letter') {
+                    openModal('modal-letter');
+                } else if (currentObj.name === 'mailbox') {
+                    openModal('modal-mailbox');
+                } else if (currentObj.name === 'book') {
+                    openModal('modal-book');
+                }
+            }
+        });
+
+        // Hover Effect
+        window.addEventListener('pointermove', (e) => {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveObjects);
+
+            if (intersects.length > 0) {
+                document.body.style.cursor = 'pointer';
+            } else {
+                document.body.style.cursor = 'default';
+            }
+        });
+
+        // --- Resize Handler ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Subtle Floating / Rotation Effect for objects
+            const time = Date.now() * 0.0015;
+            letterGroup.position.y = 0.03 + Math.sin(time * 2) * 0.02;
+            bookGroup.position.y = 0.04 + Math.cos(time * 2) * 0.02;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
